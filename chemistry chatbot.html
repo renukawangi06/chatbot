@@ -1,0 +1,2530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chemistry Quiz Bot</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .chat-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .chat-messages {
+            height: 400px;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+            animation: slideIn 0.3s ease;
+        }
+
+        .bot-message {
+            justify-content: flex-start;
+        }
+
+        .user-message {
+            justify-content: flex-end;
+        }
+
+        .message-content {
+            padding: 12px 16px;
+            border-radius: 15px;
+            max-width: 70%;
+            font-size: 16px;
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+
+        .bot-message .message-content {
+            background: #f0f2f5;
+            color: #2c3e50;
+        }
+
+        .user-message .message-content {
+            background: #2c3e50;
+            color: white;
+        }
+
+        .chat-input {
+            padding: 20px;
+            background: #f8f9fa;
+            display: flex;
+            gap: 10px;
+            border-top: 1px solid #e9ecef;
+        }
+
+        #user-input {
+            flex: 1;
+            padding: 12px 20px;
+            border: 2px solid #e9ecef;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        #user-input:focus {
+            border-color: #2c3e50;
+        }
+
+        #send-button, #hint-button {
+            padding: 12px 24px;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            min-width: 100px;
+        }
+
+        #send-button {
+            background: #2c3e50;
+        }
+
+        #hint-button {
+            background: #34495e;
+        }
+
+        #send-button:hover, #hint-button:hover {
+            transform: translateY(-2px);
+        }
+
+        #send-button:hover {
+            background: #34495e;
+        }
+
+        #hint-button:hover {
+            background: #465c71;
+        }
+
+        #send-button:active, #hint-button:active {
+            transform: translateY(0);
+        }
+
+        .score {
+            text-align: center;
+            font-size: 18px;
+            color: white;
+            margin: 10px 0;
+            padding: 5px 15px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            display: inline-block;
+        }
+
+        .quiz-controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+        }
+
+        #restart-button {
+            background: #27ae60;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            min-width: 100px;
+        }
+
+        #restart-button:hover {
+            background: #219a52;
+            transform: translateY(-2px);
+        }
+
+        #restart-button:active {
+            transform: translateY(0);
+        }
+
+        #exit-button {
+            background: #e74c3c;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            min-width: 100px;
+        }
+
+        #exit-button:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+        }
+
+        #exit-button:active {
+            transform: translateY(0);
+        }
+
+        .disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h2>Chemistry Quiz Bot</h2>
+            <div class="score">Score: <span id="score">0</span></div>
+        </div>
+        <div class="chat-messages" id="chat-messages"></div>
+        <div class="chat-input">
+            <input type="text" id="user-input" placeholder="Type your response...">
+            <button id="hint-button">Hint</button>
+            <button id="send-button">Send</button>
+        </div>
+        <div class="quiz-controls">
+            <button id="restart-button">Restart Quiz</button>
+            <button id="exit-button">Exit Quiz</button>
+        </div>
+    </div>
+
+    <script>
+        const quizQuestionsByUnit = {
+            1: [
+        {
+            type: "mcq",
+            question: "Biodegradation of a polymer is carried out by:\na) bacteria or fungi\nb) bicarbonates\nc) Vegetable oils\nd) Ozone",
+            options: ["a", "b", "c", "d"],
+            answer: "a",
+            hint: "Think about natural decomposition processes"
+        },
+        {
+            type: "mcq",
+            question: "CDs, DVDs can be made by using:\na) Polycarbonate\nb) PPV\nc) PHBV\nd) Kevlar",
+            options: ["a", "b", "c", "d"],
+            answer: "a",
+            hint: "Consider the materials used for data storage"
+        },
+        {
+            type: "mcq",
+            question: "Conductivity of conducting polymer increases with:\na) increase in triple bond\nb) increase in pressure\nc) increase in conjugation\nd) All of the above",
+            options: ["a", "b", "c", "d"],
+            answer: "d",
+            hint: "Think about factors affecting conductivity"
+        },
+        {
+            type: "mcq",
+            question: "Use of conducting polymers is done in:\na) light emitting diodes\nb) Photodiodes\nc) solar cells\nd) All of them",
+            options: ["a", "b", "c", "d"],
+            answer: "d",
+            hint: "Consider applications of conducting polymers"
+        },
+        {
+            type: "mcq",
+            question: "Which of the following is a conducting polymer:\na) Polycarbonate\nb) Nylon\nc) cis-polyacetylene\nd) D",
+            options: ["a", "b", "c", "d"],
+            answer: "c",
+            hint: "Identify the conducting polymer"
+        },
+                {
+            type: "mcq",
+            question: "Electroluminiscent Polymers are those:\na) Which emit electrons on exposure of light.\nb) Which emit light on application of electric field.\nc) Which emit UV light on application of electric field.\nd) Which emit electrons on exposure of electric field.",
+            options: ["a", "b", "c", "d"],
+            answer: "b",
+            hint: "Think about the definition of electroluminescence."
+        },
+        {
+            type: "mcq",
+            question: "Poly P-phenylenevinlene shows:\na) Red\nb) Yellow-Green\nc) Blue\nd) White",
+            options: ["a", "b", "c", "d"],
+            answer: "c",
+            hint: "Consider the fluorescence properties of this polymer."
+        },
+        {
+            type: "mcq",
+            question: "Electroluminiscence is observed because of:\na) Conjugated ∏ bonds in structure.\nb) Doping of the polymer.\nc) Recombination of holes and electrons.\nd) None of these.",
+            options: ["a", "b", "c", "d"],
+            answer: "c",
+            hint: "Think about the mechanism of electroluminescence."
+        },
+        {
+            type: "mcq",
+            question: "Which statement is observed because of:\na) It can be prepared from bisphenol A and phosgene.\nb) It can be prepared from bisphenol A and disphenylcarbonate.\nc) It is an engineering thermoplastic.\nd) It is biodegradable.",
+            options: ["a", "b", "c", "d"],
+            answer: "c",
+            hint: "Identify the characteristics of this polymer."
+        },
+                {
+            type: "mcq",
+            question: "A biodegradable polymer should:\na) Contain conjugated double bonds in main chain.\nb) Contain hydrolysable bonds in main chain.\nc) Contain only -C-C- Bonds in main chain.\nd) Contain phenylene group in main chain.",
+            options: ["a", "b", "c", "d"],
+            answer: "b",
+            hint: "Think about what allows for biodegradability."
+        },
+        {
+            type: "mcq",
+            question: "Biopol is trade name of:\na) Polycarbonate.\nb) Polyactic acid.\nc) Polyhydroxybutyratevalarate.\nd) Polyhydroxybutyrate.",
+            options: ["a", "b", "c", "d"],
+            answer: "c",
+            hint: "Consider the trade name of biodegradable polymers."
+        },
+        {
+            type: "mcq",
+            question: "An electroluminiscent polymeric material is:\na) ZnS.\nb) Poly [ paraphynelene vinylene ].\nc) Polyacetylene.\nd) PHBV ( biopol ).",
+            options: ["a", "b", "c", "d"],
+            answer: "b",
+            hint: "Identify the polymer known for electroluminescence."
+        },
+        {
+            type: "mcq",
+            question: "Polycarbonate is transparent hence useful in:\na) Biodegradation.\nb) conducting.\nc) Scuba goggles.\nd) None.",
+            options: ["a", "b", "c", "d"],
+            answer: "c",
+            hint: "Think about the applications of transparent materials."
+        },
+              {
+            type: "mcq",
+            question: "Conductivity of electrolyte solution depends on:",
+            options: ["Temperature", "Nature of solvent", "Nature of electrolyte", "All of these"],
+            answer: "d",
+            hint: "Think about factors affecting conductivity"
+        },
+        {
+            type: "mcq",
+            question: "Conductivity cell is made up of:",
+            options: ["Glass", "Plastic", "Metal", "Platinum"],
+            answer: "d",
+            hint: "Consider electrode material properties"
+        },
+        {
+            type: "mcq",
+            question: "The unit of equivalent conductance is:",
+            options: ["ohm-1 cm-1", "ohm-1 cm2 equiv-1", "ohm cm-1", "ohm cm2 equiv-1"],
+            answer: "b",
+            hint: "Think about conductance units"
+        },
+        {
+            type: "mcq",
+            question: "The pH of buffer solution:",
+            options: ["Changes with dilution", "Does not change with dilution", "Increases with dilution", "Decreases with dilution"],
+            answer: "b",
+            hint: "Consider buffer properties"
+        },
+        {
+            type: "mcq",
+            question: "During conductometric titration of strong acid vs strong base:",
+            options: ["Conductance increases", "Conductance decreases", "Conductance remains constant", "First decreases then increases"],
+            answer: "d",
+            hint: "Think about ion concentration changes"
+        },
+        {
+            type: "mcq",
+            question: "The pH range of acidic buffer is:",
+            options: ["0-7", "7-14", "exactly 7", "none of these"],
+            answer: "a",
+            hint: "Consider pH scale"
+        },
+        {
+            type: "mcq",
+            question: "Reference electrode used in pH meter is:",
+            options: ["Glass electrode", "Calomel electrode", "Hydrogen electrode", "Quinhydrone electrode"],
+            answer: "b",
+            hint: "Think about pH measurement"
+        },
+        {
+            type: "mcq",
+            question: "Conductometric titration is based on:",
+            options: ["Change in conductance", "Change in resistance", "Change in current", "All of these"],
+            answer: "a",
+            hint: "Consider measurement principle"
+        },
+        {
+            type: "mcq",
+            question: "The pH of pure water at 25°C is:",
+            options: ["0", "7", "14", "1"],
+            answer: "b",
+            hint: "Think about water dissociation"
+        },
+        {
+            type: "mcq",
+            question: "Cell constant of conductivity cell is expressed in:",
+            options: ["cm-1", "cm", "cm2", "none of these"],
+            answer: "a",
+            hint: "Consider cell geometry"
+        },
+                {
+            type: "mcq",
+            question: "Nanowires are Dimensional nanomaterials:",
+            options: ["0 D", "1 D", "2 D", "3 D"],
+            answer: "b",
+            hint: "Think about wire structure dimensions"
+        },
+        {
+            type: "mcq",
+            question: "Nanoplates are Nanomaterials:",
+            options: ["0 D", "1 D", "2 D", "3 D"],
+            answer: "c",
+            hint: "Consider plate-like structure dimensions"
+        },
+        {
+            type: "mcq",
+            question: "The transparent and flexible conductor used in photovoltaic devices is:",
+            options: ["Fullerenes", "CNTs", "Quantum Dots", "Graphene"],
+            answer: "d",
+            hint: "Think about transparent conductive materials"
+        },
+        {
+            type: "mcq",
+            question: "A single layer of carbon atoms organized in a hexagonal lattice is called as:",
+            options: ["Graphite", "CNT", "Fullerene", "Graphene"],
+            answer: "d",
+            hint: "Consider 2D carbon structure"
+        },
+        {
+            type: "mcq",
+            question: "All the carbon atoms in graphene are Hybridized:",
+            options: ["sp", "sp2", "sp3", "none of these"],
+            answer: "b",
+            hint: "Think about carbon bonding"
+        },
+        {
+            type: "mcq",
+            question: "Graphene is hexagonal lattice:",
+            options: ["0 D", "1 D", "2 D", "3 D"],
+            answer: "c",
+            hint: "Consider structure dimensions"
+        },
+        {
+            type: "mcq",
+            question: "Graphene is Conductor of electricity:",
+            options: ["Good", "Bad", "Semi", "None of these"],
+            answer: "a",
+            hint: "Think about electrical properties"
+        },
+        {
+            type: "mcq",
+            question: "Zigzag and armchair CNTs are:",
+            options: ["Chiral", "Achiral", "twisted", "None of these"],
+            answer: "b",
+            hint: "Consider molecular symmetry"
+        },
+        {
+            type: "mcq",
+            question: "Which type of CNTs shows Chiral structure?",
+            options: ["Zigzag", "Armchair", "Helical", "MWCNT"],
+            answer: "c",
+            hint: "Think about molecular arrangement"
+        },
+        {
+            type: "mcq",
+            question: "Carbon atoms in CNT are hybridized:",
+            options: ["sp", "sp2", "sp3", "None of these"],
+            answer: "b",
+            hint: "Consider carbon bonding type"
+        },
+                {
+            type: "mcq",
+            question: "Which nanomaterial is used as the nanocylinders for H2 storage?",
+            options: ["Quantum dots", "Graphene", "Fullerene", "CNT"],
+            answer: "d",
+            hint: "Think about cylindrical storage capabilities"
+        },
+        {
+            type: "mcq",
+            question: "The nanoparticles of cadmium selenide and Indium arsenide are known as:",
+            options: ["Quantum dots", "CNT", "Graphene", "Nanowire"],
+            answer: "a", 
+            hint: "Consider semiconductor nanoparticles"
+        },
+        {
+            type: "mcq",
+            question: "Larger quantum dots 5-6 nm emits longer wavelength with colors:",
+            options: ["Blue and Green", "Orange and Red", "Blue and Red", "Green and red"],
+            answer: "b",
+            hint: "Think about size-wavelength relationship"
+        },
+        {
+            type: "mcq",
+            question: "Similar quantum dots emits shorter wavelength with colors:",
+            options: ["Blue and Green", "Orange and Red", "Blue and Red", "Green and red"],
+            answer: "a",
+            hint: "Consider wavelength emission patterns"
+        },
+        {
+            type: "mcq",
+            question: "Which nanomaterials are used to improve existing LED design?",
+            options: ["CNT", "Graphene", "Quantum dots", "None of these"],
+            answer: "c",
+            hint: "Think about light-emitting properties"
+        },
+        {
+            type: "mcq",
+            question: "If a quantum dots material is coupled with an organic dye yields:",
+            options: ["Fluorescent dye", "Inorganic dye", "Traditional dye", "None of these"],
+            answer: "a",
+            hint: "Consider luminescent properties"
+        },
+        {
+            type: "mcq",
+            question: "Which nanomaterial is used in QLED displays?",
+            options: ["CNT", "graphene", "fullerene", "Quantum dots"],
+            answer: "d",
+            hint: "Think about display technology"
+        },
+        {
+            type: "mcq",
+            question: "Why quantum dots show color glow when illuminated by UV light?",
+            options: ["Fluorescent nanoparticles", "1D nanoparticle", "2D nanoparticle", "none of these"],
+            answer: "a",
+            hint: "Consider light emission mechanism"
+        },
+        {
+            type: "mcq",
+            question: "Which nanoparticles are used in Filtration?",
+            options: ["CNT", "graphene", "Fullerene", "Quantum dots"],
+            answer: "a",
+            hint: "Think about filtration applications"
+        },
+        {
+            type: "mcq",
+            question: "Gold nanoparticles shows which magnetic properties:",
+            options: ["Diamagnetic", "ferromagnetic", "Non magnetic", "None of these"],
+            answer: "b",
+            hint: "Consider magnetic behavior"
+        },
+                {
+            type: "mcq",
+            question: "The gold based CNT nanowires are selective and sensitive to detection of:",
+            options: ["ZnO", "CO", "H2S", "NH3"],
+            answer: "c",
+            hint: "Think about gas sensing applications"
+        },
+        {
+            type: "mcq",
+            question: "In power plant emissions which nanomaterials used as air pollution filter?",
+            options: ["CNT", "Graphene", "Fullerene", "Quantum dots"],
+            answer: "a",
+            hint: "Consider filtration capabilities"
+        },
+        {
+            type: "mcq",
+            question: "Armchair and zigzag CNT are the types of:",
+            options: ["SWCNT", "MWCNT", "Helical CNT", "None of these"],
+            answer: "a",
+            hint: "Think about CNT structure types"
+        }
+        
+            ],
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            2: [
+        {
+            type: "mcq",
+            question: "Mg(HCO3)2 in water on boiling gets converted to water insoluble:",
+            options: ["Mg(OH)2", "MgCO3", "MgSO4", "MgO"],
+            answer: "a",
+            hint: "Think about thermal decomposition products"
+        },
+        {
+            type: "mcq",
+            question: "In EDTA buffer solution of pH used:",
+            options: ["10", "12", "5", "9"],
+            answer: "a",
+            hint: "Consider optimal pH for EDTA titrations"
+        },
+        {
+            type: "mcq",
+            question: "Corrosion in boiler happen due to:",
+            options: ["SiO2", "CO2", "both", "none"],
+            answer: "b",
+            hint: "Think about carbonic acid formation"
+        },
+        {
+            type: "mcq",
+            question: "High water level causes:",
+            options: ["priming", "foaming", "boiler corrosion", "none"],
+            answer: "a",
+            hint: "Consider water level effects"
+        },
+        {
+            type: "mcq",
+            question: "Zeolite regenerate times:",
+            options: ["two", "three", "once", "several"],
+            answer: "d",
+            hint: "Think about zeolite reusability"
+        },
+        {
+            type: "mcq",
+            question: "Hardness calculated by:",
+            options: ["EDTA", "Stark process", "Kjeldahl process", "distillation"],
+            answer: "a",
+            hint: "Consider complexometric titration"
+        },
+        {
+            type: "mcq",
+            question: "For determination of hardness of water by using EDTA method, the pH of buffer solution is:",
+            options: ["8.2", "10", "7", "4"],
+            answer: "b",
+            hint: "Think about optimal pH conditions"
+        },
+        {
+            type: "mcq",
+            question: "Colour of metal - EDTA complex is:",
+            options: ["colourless", "blue", "pink", "none"],
+            answer: "a",
+            hint: "Consider complex formation"
+        },
+        {
+            type: "mcq",
+            question: "Ca(HCO3)2 in water on boiling is converted into:",
+            options: ["CaCO3", "CaO", "Ca(OH)2", "CaSO4"],
+            answer: "a",
+            hint: "Think about thermal decomposition"
+        },
+        {
+            type: "mcq",
+            question: "The method of treatment of softening water in which all salts are removed?",
+            options: ["zeolite", "deionisation", "lime soda", "sodium phosphate"],
+            answer: "b",
+            hint: "Consider complete ion removal"
+        },
+                {
+            type: "mcq",
+            question: "Zeolite is also known as:",
+            options: ["sodium carbonate", "permutit", "magnesium bicarbonate", "none of these"],
+            answer: "b",
+            hint: "Think about commercial name"
+        },
+        {
+            type: "mcq",
+            question: "Alkalinity OH- is present when:",
+            options: ["P = 1/2 M", "P = M", "P = 0", "P > 1/2 M"],
+            answer: "b",
+            hint: "Consider alkalinity relationships"
+        },
+        {
+            type: "mcq",
+            question: "Scales are removed by:",
+            options: ["wire brush", "hammering", "thermal shocks", "all of these"],
+            answer: "c",
+            hint: "Think about scale removal methods"
+        },
+        {
+            type: "mcq",
+            question: "M-EDTA complex is:",
+            options: ["wine red", "BLUE", "COLORLESS", "none of these"],
+            answer: "c",
+            hint: "Consider complex color"
+        },
+        {
+            type: "mcq",
+            question: "Colour of Eriochrome Black T is:",
+            options: ["wine red", "BLUE", "COLORLESS", "none of these"],
+            answer: "b",
+            hint: "Think about indicator color"
+        },
+        {
+            type: "mcq",
+            question: "Soap doesn't form lather easily in:",
+            options: ["hard water", "soft water", "hot water", "acidic water"],
+            answer: "a",
+            hint: "Consider water hardness effects"
+        },
+        {
+            type: "mcq",
+            question: "1 ppm CaCO3 equivalent hardness is meant by:",
+            options: ["10 mg CaCO3 equivalent per litre", "100 mg CaCO3 equivalent per litre", "1 mg CaCO3 equivalent per litre", "103 mg CaCO3 equivalent per litre"],
+            answer: "c",
+            hint: "Think about concentration units"
+        },
+        {
+            type: "mcq",
+            question: "Blow down operation is used to minimize:",
+            options: ["Scales formation in boiler", "Sludges deformation in boiler", "avoiding fast corrosion of boiler", "avoiding wet steam formation"],
+            answer: "b",
+            hint: "Consider boiler maintenance"
+        },
+        {
+            type: "mcq",
+            question: "Which alkaline ions cannot remain together in an:",
+            options: ["OH- & CO3 2-", "OH- & HCO3-", "HCO3- & CO3 2-", "all of these"],
+            answer: "b",
+            hint: "Think about ion compatibility"
+        },
+        {
+            type: "mcq",
+            question: "Alkalinities done by phenolphthalein changes:",
+            options: ["yellow to red", "colourless to pink", "pink to colourless", "none of these"],
+            answer: "c",
+            hint: "Consider indicator color changes"
+        },
+                {
+            type: "mcq",
+            question: "Dissolved oxygen in boiler is removed by:",
+            options: ["removing oxygen by mechanical deaeration", "Hydrazine", "zeolite method", "Both A & B"],
+            answer: "d",
+            hint: "Think about oxygen removal methods"
+        },
+        {
+            type: "mcq",
+            question: "Sludges forms in which portion of boiler?",
+            options: ["Plain portion", "well water circulated portion", "hot water circulated portion", "none of these"],
+            answer: "b",
+            hint: "Consider water circulation patterns"
+        },
+        {
+            type: "mcq",
+            question: "Priming is caused due to:",
+            options: ["oil droplets in boiler water", "foam in boiler water", "sludges in boiler water", "scales in boiler water"],
+            answer: "a",
+            hint: "Think about boiler water contaminants"
+        },
+        {
+            type: "mcq",
+            question: "12% of NaCl = mg/l:",
+            options: ["12 x 105", "1.2 x 105", "0.12 x 105", "none of these"],
+            answer: "b",
+            hint: "Consider concentration conversion"
+        },
+        {
+            type: "mcq",
+            question: "Sludges are present where is:",
+            options: ["less water", "more water", "both", "none of these"],
+            answer: "b",
+            hint: "Think about sludge formation conditions"
+        },
+        {
+            type: "mcq",
+            question: "Hardness of water is accurately determined by titration against:",
+            options: ["standard AgNO3 solution", "standard EDTA solution", "standard KMnO4 solution", "standard H2SO4 solution"],
+            answer: "b",
+            hint: "Consider complexometric titration"
+        },
+        {
+            type: "mcq",
+            question: "M - EBT colour is:",
+            options: ["wine red", "blue", "pink", "none of these"],
+            answer: "a",
+            hint: "Think about metal-indicator complex color"
+        },
+        {
+            type: "mcq",
+            question: "Na2EDTA is used instead of EDTA because:",
+            options: ["EDTA is completely soluble", "Na2EDTA is partly soluble", "Na2EDTA is completely soluble in water", "All of these"],
+            answer: "c",
+            hint: "Consider solubility properties"
+        },
+                {
+            type: "mcq",
+            question: "The hardness which is present after boiling is:",
+            options: ["Temporary", "Total", "Permanent", "none of these"],
+            answer: "c",
+            hint: "Think about types of water hardness"
+        },
+        {
+            type: "mcq",
+            question: "For regeneration of Zeolite is used:",
+            options: ["NaOH", "C2H5OH", "Brine", "Methanol"],
+            answer: "c",
+            hint: "Consider zeolite regeneration process"
+        },
+        {
+            type: "mcq",
+            question: "EDTA molecule has carboxyllic acid groups & nitrogen atoms:",
+            options: ["4, 2", "3, 2", "2, 4", "2, 3"],
+            answer: "a",
+            hint: "Think about EDTA structure"
+        },
+        {
+            type: "mcq",
+            question: "Zeolite is the:",
+            options: ["hydrated sodium alumino phosphate", "hydrated sodium alumino phosphorous silicate", "hydrated sodium alumino silicate", "Sodium hexametaphophate"],
+            answer: "c",
+            hint: "Consider zeolite composition"
+        },
+        {
+            type: "mcq",
+            question: "The process of removing dissolved ionic impurities (salts) from water by using membranes & electric field is:",
+            options: ["osmosis", "reverse osmosis", "electrodialysis", "scales"],
+            answer: "c",
+            hint: "Think about ion removal methods"
+        },
+        {
+            type: "mcq",
+            question: "Hard & sticky material in boiler:",
+            options: ["Sludge", "priming & foaming", "Corrosion", "scales"],
+            answer: "d",
+            hint: "Consider boiler deposits"
+        },
+        {
+            type: "mcq",
+            question: "For highly alkaline boiler feed water is used in phosphate conditioning:",
+            options: ["NaH2PO4", "Na2HPO4", "Na3PO4", "All of these"],
+            answer: "a",
+            hint: "Think about pH conditions"
+        },
+        {
+            type: "mcq",
+            question: "Bhopal gas tragedy due to the gas:",
+            options: ["Methyl Chloride", "Methyl acetate", "Methyl Nitrate", "Methyl Isocyanate"],
+            answer: "d",
+            hint: "Consider industrial accidents"
+        },
+        {
+            type: "mcq",
+            question: "Problem of boiler corrosion by oxygen is prevented by:",
+            options: ["sodium sulphate", "Hydrazine", "calcium chloride", "Both A & B"],
+            answer: "d",
+            hint: "Think about oxygen scavengers"
+        },
+                {
+            type: "mcq",
+            question: "Which of the following represent Exhausted Anion exchanger resins?",
+            options: ["RCOO-H+", "RCl-", "RSO4--", "Both B & C"],
+            answer: "d",
+            hint: "Think about anion exchange process"
+        },
+        {
+            type: "mcq",
+            question: "The hardness of water is 280 ppm. After boiling it reduces upto 120 ppm. Then permanent hardness is:",
+            options: ["40", "80", "120", "400"],
+            answer: "c",
+            hint: "Consider remaining hardness after boiling"
+        },
+        {
+            type: "mcq",
+            question: "8 % NaCl is equal to gm/litre:",
+            options: ["0.08", "80", "0.008", "0.00008"],
+            answer: "b",
+            hint: "Think about concentration conversion"
+        },
+        {
+            type: "mcq",
+            question: "Alkalinity is titration:",
+            options: ["acid - base", "redox", "complexometric titration", "precipitation"],
+            answer: "a",
+            hint: "Consider type of reaction"
+        },
+        {
+            type: "mcq",
+            question: "MgCl2 is stored in the form of:",
+            options: ["Mg(HCO3)2", "Mg(OH)2", "CaCO3", "MgCO3"],
+            answer: "b",
+            hint: "Think about stable form"
+        },
+        {
+            type: "mcq",
+            question: "In zeolite, it removes:",
+            options: ["only anionic impuritites", "Both Cationic & Anionic Impurities", "only cationic impurities", "none of these"],
+            answer: "c",
+            hint: "Consider ion exchange process"
+        },
+        {
+            type: "mcq",
+            question: "Temporary hardness in water is removed by:",
+            options: ["crystallization", "filtration", "addition of Na2CO3", "boiling"],
+            answer: "d",
+            hint: "Think about hardness removal methods"
+        },
+        {
+            type: "mcq",
+            question: "Titration of hard water against EDTA belongs to the type of titration:",
+            options: ["redox", "precipitation", "neutralization", "complexometric"],
+            answer: "d",
+            hint: "Consider type of reaction"
+        },
+        {
+            type: "mcq",
+            question: "The chemical used for sterilization of water is:",
+            options: ["chlorine", "bleaching powder", "sodium hypochloride", "all of these"],
+            answer: "d",
+            hint: "Think about water treatment chemicals"
+        },
+        {
+            type: "mcq",
+            question: "A semipermeable membrane allows the flow of:",
+            options: ["solute molecule", "solvent molecule", "both solute & solvent molecule", "neither of solvent or solute molecule"],
+            answer: "b",
+            hint: "Consider membrane properties"
+        },
+        
+            ],
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            3: [
+        {
+            type: "mcq",
+            question: "When a strong acid is titrated against strong base the end point is the point of:",
+            options: ["Zero conductance", "Maximum conductance", "Minimum conductance", "None of these"],
+            answer: "c",
+            hint: "Think about conductivity changes during titration"
+        },
+        {
+            type: "mcq",
+            question: "Unit of Specific conductance is:",
+            options: ["ohm. Cm-1", "ohm-1. cm", "ohm-1. cm-1", "ohm.cm"],
+            answer: "c",
+            hint: "Consider conductance units"
+        },
+        {
+            type: "mcq",
+            question: "Electrode potential increases if conc. H+:",
+            options: ["increases", "decreases", "increases & decreases", "stable"],
+            answer: "b",
+            hint: "Think about Nernst equation"
+        },
+        {
+            type: "mcq",
+            question: "pH = 1 solution is:",
+            options: ["acidic", "basic", "amphoteric", "neutral"],
+            answer: "a",
+            hint: "Consider pH scale"
+        },
+        {
+            type: "mcq",
+            question: "If temp increases, then dissociation:",
+            options: ["increases", "decreases", "remains same", "none of these"],
+            answer: "a",
+            hint: "Think about temperature effects"
+        },
+        {
+            type: "mcq",
+            question: "In the relation R α ƍ l/a, where ƍ is:",
+            options: ["specific resistance", "conductance", "resistivity", "none of these"],
+            answer: "a",
+            hint: "Consider resistance relationships"
+        },
+        {
+            type: "mcq",
+            question: "For a solution HCl + CH3COOH during titration with NaOH, first eq. point is observed at pH for:",
+            options: ["(8-9), [HCl]", "(4-5) [HCl + 1/3rd CH3COOH]", "(8-9), [HCl + 1/3rd CH3COOH]", "(4-5) [HCl]"],
+            answer: "d",
+            hint: "Think about acid strength"
+        },
+        {
+            type: "mcq",
+            question: "Hydrogen electrode is:",
+            options: ["primary reference", "secondary reference", "primary indicator", "secondary indicator"],
+            answer: "a",
+            hint: "Consider electrode types"
+        },
+        {
+            type: "mcq",
+            question: "In Conductometric titration, the graph of strong acid Vs strong base is:",
+            options: ["increases upto end point and then decreases", "remains constant upto end point & then increases", "decreases upto end point & then increases", "decreases upto end point & then remains constant"],
+            answer: "c",
+            hint: "Think about conductivity changes"
+        },
+        {
+            type: "mcq",
+            question: "Electrode potential of reference electrode:",
+            options: ["Changes During Titration", "remain constant during Titration", "depend on type of titration", "None of these"],
+            answer: "b",
+            hint: "Consider reference electrode properties"
+        },
+                {
+            type: "mcq", 
+            question: "When a strong acid is titrated against the strong base, equivalent point of titration is the point:",
+            options: ["zero conductance", "maximum conductance", "minimum conductance", "none of these"],
+            answer: "c",
+            hint: "Think about conductance at equivalence point"
+        },
+        {
+            type: "mcq",
+            question: "What is placed at the bottom of calomel electrode?",
+            options: ["HgCl", "Pt", "Hg2Cl2", "Hg"],
+            answer: "d",
+            hint: "Consider electrode construction"
+        },
+        {
+            type: "mcq",
+            question: "Calomel reference electrode contains solution of:",
+            options: ["HCl", "KCl", "Hg2Cl2", "HgCl2"],
+            answer: "b",
+            hint: "Think about electrolyte solution"
+        },
+        {
+            type: "mcq",
+            question: "For the conductivity of the material which electrode is used?",
+            options: ["pd", "Ni", "Al", "Pt"],
+            answer: "d",
+            hint: "Consider inert electrode materials"
+        },
+        {
+            type: "mcq",
+            question: "During pHmetric titration of mixture HCl & weak acid Vs NaOH from burette:",
+            options: ["HCl completely neutralise first & then weak acid", "Weak acid completely neutralise first & then HCl", "HCl neutralise half & then weak acid", "none of these"],
+            answer: "a",
+            hint: "Think about acid strength order"
+        },
+        {
+            type: "mcq",
+            question: "Which of the following is mixture of buffer solution?",
+            options: ["strong acid & salt of weak base", "weak acid & salt of weak acid", "strong acid & salt of strong acid", "strong acid & salt of strong base"],
+            answer: "b",
+            hint: "Consider buffer composition"
+        },
+        {
+            type: "mcq",
+            question: "In cell represented by Zn/Zn+2//Cu2+/Cu, oxidation occurs at the electrode:",
+            options: ["Zn", "Cu", "both a & b", "none of these"],
+            answer: "a",
+            hint: "Think about oxidation potential"
+        },
+        {
+            type: "mcq",
+            question: "Which of the following is at the bottom portion of calomel reference electrode?",
+            options: ["Hg + Hg2Cl2", "Hg", "Hg + Cl2 paste", "KCl"],
+            answer: "b",
+            hint: "Consider electrode construction"
+        },
+        {
+            type: "mcq",
+            question: "Which of the following is above the Hg layer present in the calomel reference electrode?",
+            options: ["mercurous chloride", "mercuric chloride", "zinc chloride", "none of these"],
+            answer: "a",
+            hint: "Think about electrode layers"
+        },
+        {
+            type: "mcq",
+            question: "Glass electrode is used as an indicator electrode in:",
+            options: ["potentiometry", "pH metry", "conductometry", "none of these"],
+            answer: "b",
+            hint: "Consider pH measurement techniques"
+        },
+                {
+            type: "mcq",
+            question: "Buffer is used to maintain:",
+            options: ["pH", "pOH", "both", "none"],
+            answer: "a",
+            hint: "Think about buffer function"
+        },
+        {
+            type: "mcq",
+            question: "Ratio of specific conductance to observed conductance is:",
+            options: ["molar conductance", "specific conductance", "cell constant", "equivalent conductance"],
+            answer: "c",
+            hint: "Consider conductance relationships"
+        },
+        {
+            type: "mcq",
+            question: "When base is added to titration of strong acid Vs strong base, H+ ions in solution are replaced by:",
+            options: ["Cl-", "Na+", "OH-", "CH3COO-"],
+            answer: "b",
+            hint: "Think about ion exchange"
+        },
+        {
+            type: "mcq",
+            question: "Example of weak acid - weak base titration is:",
+            options: ["CH3COOH & NH4OH", "NH4OH & HCl", "NaOH & HCl", "none of these"],
+            answer: "a",
+            hint: "Consider acid-base strength"
+        },
+        {
+            type: "mcq",
+            question: "Basic buffer is:",
+            options: ["CH3COOH + CH3COONa", "NH4OH + NH4Cl", "NH4OH + CH3COOH", "CH3COOH + NH4Cl"],
+            answer: "b",
+            hint: "Think about basic buffer composition"
+        },
+        {
+            type: "mcq",
+            question: "Specific conductance is denoted by:",
+            options: ["ƍ", "k", "C", "μ"],
+            answer: "b",
+            hint: "Consider conductance symbols"
+        },
+        {
+            type: "mcq",
+            question: "Calomel electrode is made by using:",
+            options: ["Hg with mercurous chloride", "Hg with mercuric chloride", "Zn with mercurous chloride", "Ca with mercurous chloride"],
+            answer: "a",
+            hint: "Think about electrode materials"
+        },
+        {
+            type: "mcq",
+            question: "Which of the following is not a buffer solution?",
+            options: ["NH4Cl + NH4OH", "CH3COONa + CH3COOH", "HCOONa + CH3COOH", "Borax + Boric acid"],
+            answer: "d",
+            hint: "Consider buffer components"
+        },
+        {
+            type: "mcq",
+            question: "Solution having pH = 7 is:",
+            options: ["acidic", "basic", "neutral", "pure"],
+            answer: "c",
+            hint: "Think about pH scale"
+        },
+        {
+            type: "mcq",
+            question: "If Calomel electrode acts as cathode, the reaction on electrode is:",
+            options: ["2 Hg (s) + 2 Cl- → Hg2Cl2 + 2 e-", "Hg2Cl2 + 2 e- → 2 Hg (s) + 2 Cl-", "2 Cl- → Cl2 + 2 e-", "Cl2 + 2 e- → 2 Cl-"],
+            answer: "b",
+            hint: "Consider cathode reactions"
+        },
+                {
+            type: "mcq",
+            question: "Aqueous solution of which one of the following does not conduct electricity?",
+            options: ["AgNO3", "CH3COOH", "ethyl alcohol", "NaOH"],
+            answer: "c",
+            hint: "Think about ionic vs molecular compounds"
+        },
+        {
+            type: "mcq",
+            question: "If solution of buffer having pH=10 is added, then after addition of acid will pH:",
+            options: ["increase", "decrease", "remains same", "reduced to zero"],
+            answer: "c",
+            hint: "Consider buffer action"
+        },
+        {
+            type: "mcq",
+            question: "On increasing concentration of H+ ions, the electrode potential will:",
+            options: ["remain same", "decrease", "increase", "reduced to zero"],
+            answer: "b",
+            hint: "Think about Nernst equation"
+        },
+        {
+            type: "mcq",
+            question: "pH of HCl 0.001M is:",
+            options: ["3", "6", "9", "11"],
+            answer: "a",
+            hint: "Consider pH calculation for strong acids"
+        },
+        {
+            type: "mcq",
+            question: "Few drops of acid added to basic buffer, H+ ions combine with:",
+            options: ["NH4+", "OH-", "Cl-", "Any one of these"],
+            answer: "b",
+            hint: "Think about buffer mechanism"
+        },
+        {
+            type: "mcq",
+            question: "In acidic buffer, the acetate ions combine with:",
+            options: ["CH3COO-", "H+", "Na+", "all of these"],
+            answer: "b",
+            hint: "Consider acid buffer components"
+        },
+        {
+            type: "mcq",
+            question: "Hydrogen ion selective electrode used for pH measurement of a solution:",
+            options: ["standard hydrogen electrode", "calomel electrode", "glass electrode", "platinum electrode"],
+            answer: "c",
+            hint: "Think about pH measurement"
+        },
+        {
+            type: "mcq",
+            question: "A few drops of HCl added to basic buffer leads to formation of:",
+            options: ["Completely ionized water molecules", "Nearly unionized NH4OH", "Completely ionized NH4OH", "Nearly unionized water molecules"],
+            answer: "d",
+            hint: "Consider buffer reactions"
+        },
+        {
+            type: "mcq",
+            question: "Acid buffer consists of a solution of:",
+            options: ["Weak acid and its salt with strong base", "Weak acid and its salt with weak base", "Strong acid and its salt with weak base", "Strong acid and its salt with strong"],
+            answer: "a",
+            hint: "Think about acid buffer composition"
+        },
+        {
+            type: "mcq",
+            question: "At all temperatures, std. hydrogen electrode potential is equal to:",
+            options: ["0.00V", "0.0591V", "1.00V", "1.1V"],
+            answer: "a",
+            hint: "Consider reference electrode properties"
+        },
+                {
+            type: "mcq",
+            question: "At the bottom of calomel electrode there is a layer of:",
+            options: ["Only Hg", "Hg and paste of HgCl2 and Hg", "Hg and paste of Hg2Cl2 and Hg", "Paste of Hg2Cl2 and Hg"],
+            answer: "c",
+            hint: "Think about electrode construction"
+        },
+        {
+            type: "mcq",
+            question: "Basic buffer can be prepared by mixing:",
+            options: [
+                "Weak acid with salt of weak acid & strong base",
+                "Weak base with salt of weak base & strong acid",
+                "Weak acid with salt of weak acid & weak base",
+                "Weak base with salt of weak acid & weak base"
+            ],
+            answer: "b",
+            hint: "Consider basic buffer composition"
+        },
+        {
+            type: "mcq",
+            question: "Calomel electrode and silver-silver chloride electrode are the examples of electrode:",
+            options: ["Reference", "Standard", "Secondary reference", "None of the above"],
+            answer: "c",
+            hint: "Think about electrode classification"
+        },
+        {
+            type: "mcq",
+            question: "Calomel electrode can be represented as:",
+            options: ["Hg,Hg2Cl2 |Cl−", "Pt, AgCl |Cl−", "Hg,HgCl2 |Cl−", "Pt |1M HCl"],
+            answer: "a",
+            hint: "Consider electrode notation"
+        },
+        {
+            type: "mcq",
+            question: "IR spectroscopy measures:",
+            options: ["Molecular Rotation", "Electronic Excitation", "Nuclear excitation", "Molecular vibrations"],
+            answer: "d",
+            hint: "Think about IR spectroscopy principles"
+        },
+        {
+            type: "mcq",
+            question: "Stretching vibrations in molecules involves:",
+            options: [
+                "Movement of the atoms w.r.t. particular atom in same direction",
+                "Movement of the atoms w.r.t. particular atom in opposite direction",
+                "Movement of the atoms w.r.t. particular atom in parallel direction",
+                "Movement of the atoms w.r.t. particular atom in perpendicular direction"
+            ],
+            answer: "a",
+            hint: "Consider molecular movements"
+        },
+        {
+            type: "mcq",
+            question: "Match the following:\ni) Scissoring a) movement of atoms in same direction in same plane\nii) Rocking b) movement of two atoms in opposite direction in same plane\niii) Wagging c) movement of one atom up and other atom down the plane\niv) Twisting d) movement of atoms up the plane or below the plane",
+            options: ["i=d, ii=c, iii=b, iv=a", "i=b, ii=a, iii=d, iv=c", "i=c, ii=d, iii=b, iv=a", "i=d, ii=a, iii=d, iv=b"],
+            answer: "b",
+            hint: "Think about different types of molecular movements"
+        },
+        {
+            type: "mcq",
+            question: "Bending vibrations are characterised by:",
+            options: [
+                "Change in bond angle between two covalent bonds",
+                "Change in bond length between two covalent bonds",
+                "Change in geometry of molecule",
+                "Change in internuclear distance"
+            ],
+            answer: "a",
+            hint: "Consider bond angle changes"
+        },
+        {
+            type: "mcq",
+            question: "Fundamental modes of vibrations in benzene are:",
+            options: ["9", "6", "3", "30"],
+            answer: "d",
+            hint: "Think about molecular symmetry"
+        },
+        {
+            type: "mcq",
+            question: "Fundamental modes of vibrations in CO2 are:",
+            options: ["9", "6", "4", "30"],
+            answer: "c",
+            hint: "Consider molecular structure"
+        }
+            ],
+            
+            
+            
+            
+            
+            
+            
+            4: [
+        {
+            type: "mcq",
+            question: "A higher sulphur % coal is of bad quality due to:",
+            options: ["It increases calorific value", "It decreases C.V. of coal", "It forms volatile matter", "It forms sulphur oxides"],
+            answer: "d",
+            hint: "Think about environmental impact"
+        },
+        {
+            type: "mcq",
+            question: "A higher volatile matter in coal causes:",
+            options: ["Pollution in air", "Decreases calorific value of coal", "Elongates flame and decreases flame temperature", "All of these"],
+            answer: "d",
+            hint: "Consider effects of volatile matter"
+        },
+        {
+            type: "mcq",
+            question: "Acid correction should be during calculation of GCV of a fuel by bomb calorimeter correctly:",
+            options: ["Added", "Subtracted", "Multiplied", "Divided"],
+            answer: "b",
+            hint: "Think about calorimeter calculations"
+        },
+        {
+            type: "mcq",
+            question: "A better quality coal should have percentage of volatile matter:",
+            options: ["high", "moderate", "low", "unpredictable"],
+            answer: "c",
+            hint: "Consider coal quality parameters"
+        },
+        {
+            type: "mcq",
+            question: "A better quality coal should have percentage of fixed carbon:",
+            options: ["high", "moderate", "low", "none of these"],
+            answer: "a",
+            hint: "Think about coal composition"
+        },
+        {
+            type: "mcq",
+            question: "Kjeldahl's method is used for determination of in ultimate analysis of coal:",
+            options: ["% H", "% N", "% S", "% O"],
+            answer: "b",
+            hint: "Consider elemental analysis methods"
+        },
+        {
+            type: "mcq",
+            question: "Paraffinic based petroleum contains mainly:",
+            options: ["saturated hydrocarbons", "naphthenes", "aromatics", "none of these"],
+            answer: "a",
+            hint: "Think about hydrocarbon types"
+        },
+        {
+            type: "mcq",
+            question: "In refining process, petroleum is separated into its components due to:",
+            options: ["distillation", "fractional distillation", "evaporation", "condensation"],
+            answer: "b",
+            hint: "Consider separation techniques"
+        },
+        {
+            type: "mcq",
+            question: "In fractional distillation of crude oil, hydrocarbons are separated according to their boiling point range by stepwise cooling in such a way that:",
+            options: [
+                "vapours of lower boiling point condense first",
+                "vapours of higher boiling point condense first",
+                "vapours of higher boiling point condense last",
+                "none of these"
+            ],
+            answer: "b",
+            hint: "Think about fractional distillation process"
+        },
+        {
+            type: "mcq",
+            question: "Power alcohol is blended with petrol:",
+            options: ["ethanol", "methanol", "propanol", "kerosene"],
+            answer: "a",
+            hint: "Consider fuel additives"
+        },
+                {
+            type: "mcq",
+            question: "In power alcohol, ethanol is blended with petrol & used as fuel in IC engines:",
+            options: ["80-90 %", "40-50 %", "20-25 %", "less than 10 %"],
+            answer: "c",
+            hint: "Consider optimal blend ratios"
+        },
+        {
+            type: "mcq",
+            question: "Power alcohol is advantageous because:",
+            options: ["it gives higher octane number", "it burns clean", "it reduces overheating of engine", "all of these"],
+            answer: "d",
+            hint: "Think about fuel benefits"
+        },
+        {
+            type: "mcq",
+            question: "Power alcohol is disadvantageous because:",
+            options: ["it lowers CV", "it gives starting trouble", "it causes corrosion of engine parts", "all of these"],
+            answer: "d",
+            hint: "Consider fuel drawbacks"
+        },
+        {
+            type: "mcq",
+            question: "Biodiesel is a biofuel obtained from:",
+            options: ["biological decomposition", "crude oil", "vegetable oil", "none of these"],
+            answer: "c",
+            hint: "Think about biodiesel sources"
+        },
+        {
+            type: "mcq",
+            question: "Biodiesel is obtained from vegetable oil or animal oils by:",
+            options: ["distillation", "esterification", "transesterification", "fermentation"],
+            answer: "c",
+            hint: "Consider production methods"
+        },
+        {
+            type: "mcq",
+            question: "In transesterification process to prepare biodiesel, vegetable/animal oils are heated with excess of in presence of catalyst:",
+            options: ["methanol", "methane", "methyl ester", "glycerol"],
+            answer: "a",
+            hint: "Think about reactants needed"
+        },
+        {
+            type: "mcq",
+            question: "In transesterification process to prepare biodiesel, the catalyst used is:",
+            options: ["NaOH", "NH3", "either of these", "none of these"],
+            answer: "a",
+            hint: "Consider catalysts"
+        },
+        {
+            type: "mcq",
+            question: "In transesterification process to prepare biodiesel, type of esters are converted to esters of fatty acid:",
+            options: ["triglyceride, propyl", "triglyceride, methyl", "diglyceride, methyl", "diglyceride, propyl"],
+            answer: "b",
+            hint: "Think about ester conversion"
+        },
+        {
+            type: "mcq",
+            question: "In the process of preparing biodiesel, is obtained as byproduct:",
+            options: ["ethanol", "glycerol", "methanol", "none of these"],
+            answer: "b",
+            hint: "Consider reaction products"
+        },
+        {
+            type: "mcq",
+            question: "Advantage of biodiesel is:",
+            options: ["it has lower flash point", "it has less lubricity", "it has lower cetane number", "none of these"],
+            answer: "d",
+            hint: "Think about biodiesel properties"
+        },
+                {
+            type: "mcq",
+            question: "Relation of GCV & NCV is given by:",
+            options: [
+                "NCV = GCV - 0.09 x H x 587 cal/gm",
+                "GCV = NCV - 0.09 x H x 587 cal/gm",
+                "GCV = NCV + 0.09 x H x 587 cal/gm",
+                "NCV = GCV + 0.09 x H x 587 cal/gm"
+            ],
+            answer: "a",
+            hint: "Consider heat value relationships"
+        },
+        {
+            type: "mcq",
+            question: "Acid correction should be subtracted during calculation of GCV for Bomb calorimeter as it involves:",
+            options: ["Exothermic reaction", "Displacement reaction", "Neutralisation reaction", "Endothermic reaction"],
+            answer: "a",
+            hint: "Think about reaction types"
+        },
+        {
+            type: "mcq",
+            question: "Fuse wire correction should be from the formula of GCV calculation:",
+            options: ["added", "substracted", "multiplied", "neglected"],
+            answer: "b",
+            hint: "Consider calorimeter corrections"
+        },
+        {
+            type: "mcq",
+            question: "Cooling correction should be from the formula of GCV calculation:",
+            options: ["added", "substracted", "multiplied", "neglected"],
+            answer: "a",
+            hint: "Think about heat loss corrections"
+        },
+        {
+            type: "mcq",
+            question: "Boy's gas calorimeter is used for measuring Calorific Value of:",
+            options: ["solid fuel", "non-volatile liquid fuel", "gaseous fuel", "semisolid fuel"],
+            answer: "c",
+            hint: "Consider fuel type measurements"
+        },
+        {
+            type: "mcq",
+            question: "Bomb calorimeter is used for measuring Calorific value of:",
+            options: ["solid fuel", "volatile liquid fuel", "gaseous fuel", "semisolid fuel"],
+            answer: "a",
+            hint: "Think about calorimeter applications"
+        },
+        {
+            type: "mcq",
+            question: "In calculation of GCV of fuel by Bomb calorimeter experiment, the crucible in which a measured quantity of fuel is kept is made up of:",
+            options: ["copper", "iron", "silica", "stainless steel"],
+            answer: "d",
+            hint: "Consider material properties"
+        },
+        {
+            type: "mcq",
+            question: "For a moisture free sample, %VM can be calculated as:",
+            options: [
+                "%VM = (Loss in Wt. / Wt. of coal sample). 10 -3",
+                "%VM = ( Wt.of coal sample /Gain in Wt. ) X 10 - 3",
+                "%VM = (Gain in Wt. / Wt. of coal sample) X 100",
+                "%VM = (Loss in Wt. / Wt. of coal sample) X 100"
+            ],
+            answer: "d",
+            hint: "Think about volatile matter calculation"
+        },
+        {
+            type: "mcq",
+            question: "If a fresh coal sample is subjected to VM determination, it can be calculated as:",
+            options: [
+                "%VM = (Wt. of coal sample / Loss in Wt.) X 100 - %Moisture",
+                "%VM = (Loss in Wt / Wt. of coal sample) X 100 - %Moisture",
+                "%VM = (Gain in weight / Wt. of coal sample) X 100 + %Moisture",
+                "none of these"
+            ],
+            answer: "b",
+            hint: "Consider moisture correction"
+        },
+        {
+            type: "mcq",
+            question: "For ash content determination of a coal sample, it is kept in:",
+            options: ["muffle furnace", "air oven", "bomb calorimeter", "Boy's calorimeter"],
+            answer: "a",
+            hint: "Think about ash determination methods"
+        },
+                {
+            type: "mcq",
+            question: "Ash content of a coal sample can be determined by keeping the coal sample in muffle furnace at:",
+            options: ["150 0C", "750 0C", "925 0C", "110 0C"],
+            answer: "b",
+            hint: "Consider ash determination temperature"
+        },
+        {
+            type: "mcq", 
+            question: "Ash determination is carried out by keeping the coal sample in furnace at 750 0C for about:",
+            options: ["1 hour", "7 minutes", "30 minutes", "5 minutes"],
+            answer: "c",
+            hint: "Think about optimal heating time"
+        },
+        {
+            type: "mcq",
+            question: "If a coal sample is kept in a muffle furnace at 750 0C, for half an hour, we can determine its:",
+            options: ["%FC", "%N2", "%S", "% ash"],
+            answer: "d",
+            hint: "Consider analysis conditions"
+        },
+        {
+            type: "mcq",
+            question: "In a good quality coal, %ash should be minimum because:",
+            options: ["it increases C.V. of fuel", "its disposal is a problem", "it reduces %M of fuel", "it produces smoke"],
+            answer: "b",
+            hint: "Think about ash effects"
+        },
+        {
+            type: "mcq",
+            question: "Lower ash content in a coal sample is desirable as:",
+            options: ["it reduces calorific value", "it forms clinkers which leads to incomplete combustion", "its disposal is a problem", "all of these"],
+            answer: "d",
+            hint: "Consider ash content impacts"
+        },
+        {
+            type: "mcq",
+            question: "% ash can be calculated using the formula:",
+            options: [
+                "%ash =(Loss in Wt./ Wt. of sample) X 100",
+                "%ash =(Wt.of ash left / Wt.of coal sample) X 100",
+                "%ash =(Wt.of coal sample / Wt.of ash left ) X 100",
+                "%ash =(Wt.of ash left / Wt.of coal sample) X 100 - %Moisture"
+            ],
+            answer: "b",
+            hint: "Think about ash calculation"
+        },
+        {
+            type: "mcq",
+            question: "Using proximate analysis results, %fixed carbon can be calculated as:",
+            options: [
+                "%FC = 100 - (%M - %VM - %ash)",
+                "%FC = 100 + (%M + %VM + %ash)",
+                "%FC = 100 - (%M + %VM + %ash)",
+                "%FC = 100 - %M + %VM + %ash"
+            ],
+            answer: "c",
+            hint: "Consider composition calculation"
+        },
+        {
+            type: "mcq",
+            question: "Ultimate analysis deals with the determination of:",
+            options: ["Fixed carbon, Volatile matter, ash, moisture", "C, H,N, O,S", "C, H, N, S, P, Na, O", "C, H, N, S, O, ASH"],
+            answer: "b",
+            hint: "Think about elemental analysis"
+        },
+        {
+            type: "mcq",
+            question: "Increase in the weight of anhydrous CaCl2 U-tube indicates the weight of:",
+            options: ["HCl formed", "H2O formed", "CO2 formed", "H2SO4 formed"],
+            answer: "b",
+            hint: "Consider moisture absorption"
+        },
+        {
+            type: "mcq",
+            question: "Increase in the weight of anhydrous KOH U-tube indicates the weight of:",
+            options: ["CO formed", "H2O formed", "H2O2 formed", "CO2 formed"],
+            answer: "d",
+            hint: "Think about gas absorption"
+        },
+                {
+            type: "mcq",
+            question: "The U-tube that absorbs CO2 contains solution of:",
+            options: ["NaCl", "KOH", "KCl", "H2SO4"],
+            answer: "b",
+            hint: "Think about CO2 absorption"
+        },
+        {
+            type: "mcq",
+            question: "The U-tube that absorbs H2O formed during combustion, contains:",
+            options: ["KOH", "anhydrous CaCl2", "HCl", "both b and c"],
+            answer: "b",
+            hint: "Consider water absorption"
+        },
+        {
+            type: "mcq",
+            question: "For ultimate analysis of nitrogen in a coal sample, the method used is:",
+            options: ["combustion method", "kjeldahl's method", "Eschka method", "Nernst's method"],
+            answer: "b",
+            hint: "Think about nitrogen analysis"
+        },
+        {
+            type: "mcq",
+            question: "In kjeldahl's method of nitrogen estimation, catalyst used is:",
+            options: ["K2SO4", "H2SO4", "(NH4)2SO4", "NH3"],
+            answer: "a",
+            hint: "Consider catalysts"
+        },
+        {
+            type: "mcq",
+            question: "Glucose is converted into ethanol and Carbon dioxide with the help of enzyme:",
+            options: ["invertase", "Zymase", "Reductase", "maltase"],
+            answer: "b",
+            hint: "Think about fermentation"
+        },
+        {
+            type: "mcq",
+            question: "Sucrose is broken down into glucose and Fructose with the help of enzyme:",
+            options: ["invertase", "Zymase", "Reductase", "maltase"],
+            answer: "a",
+            hint: "Consider sugar breakdown"
+        },
+        {
+            type: "mcq",
+            question: "Advantage of power Alcohol is:",
+            options: ["high octane rating", "Clean burning", "Removes traces of water", "All of these"],
+            answer: "d",
+            hint: "Think about fuel benefits"
+        },
+        {
+            type: "mcq",
+            question: "In kjeldahl's method, when coal sample is heated with concentrated H2SO4 solution, nitrogen from the sample gets converted into:",
+            options: ["NH4Cl", "(NH4)2SO4", "N2SO4", "HNO3"],
+            answer: "b",
+            hint: "Consider nitrogen conversion"
+        },
+        {
+            type: "mcq",
+            question: "Estimation of nitrogen by Kjeldahl's method involves absorption of (NH4)2SO4 into:",
+            options: ["carbon", "alkali", "acid", "water"],
+            answer: "b",
+            hint: "Think about absorption process"
+        },
+        {
+            type: "mcq",
+            question: "In nitrogen estimation by Kjeldahl's method, the liberated NH3 is passed in a known volume of standard:",
+            options: ["carbon", "alkali", "acid", "water"],
+            answer: "c",
+            hint: "Consider ammonia absorption"
+        },
+                {
+            type: "mcq",
+            question: "In nitrogen estimation by Kjeldahl's method, the unused acid is determined using NaOH by:",
+            options: ["blank titration", "black titration", "big titration", "back titration"],
+            answer: "d",
+            hint: "Think about titration methods"
+        },
+        {
+            type: "mcq",
+            question: "For estimation of sulphur, the coal sample is burnt using:",
+            options: ["bomb calorimeter", "Eschka method", "Boy's calorimeter", "kjeldahl's method"],
+            answer: "a",
+            hint: "Consider sulfur analysis methods"
+        },
+        {
+            type: "mcq",
+            question: "A coal sample contains 75% C, 5% H, 1% S, 2% N, 10% Ash. The % of oxygen in coal is?",
+            options: ["27", "7", "0", "cant be predicted"],
+            answer: "b",
+            hint: "Think about composition calculation"
+        },
+        {
+            type: "mcq",
+            question: "A COAL HAS GCV=7800 cal/gm AND 4% HYDROGEN, ITS NET CALORIFIC VALUE WILL BE cal/gm(LATENT HEAT OF STEAM IS 587 cal/gm):",
+            options: ["6666", "4678", "4519", "7588"],
+            answer: "d",
+            hint: "Consider calorific value calculation"
+        },
+        {
+            type: "mcq",
+            question: "Calculate S% in coal when 0.55 gm of coal is combusted in bomb calorimeter. solution form bomb on treatment with BaCl2 form 0.025gm BaSO4:",
+            options: ["0.62%", "0.72%", "0.82%", "0.92%"],
+            answer: "a",
+            hint: "Think about sulfur percentage calculation"
+        },
+        {
+            type: "mcq",
+            question: "Characteristic of an ideal Fuel:",
+            options: ["High Vm HighFC LowH2O LowAsh", "High FC LowH2O LowAsh LowVm", "LowVm LowH2O LowAsh LowFC", "High FC HighVm HighH2O HighAsh"],
+            answer: "b",
+            hint: "Consider ideal fuel properties"
+        },
+        {
+            type: "mcq",
+            question: "The CV of ethyl alcohol and petrol are & cal/gm:",
+            options: ["7000 and 11500", "1000 and 1300", "1267 and 500", "2000 and 3000"],
+            answer: "a",
+            hint: "Think about calorific values"
+        },
+        {
+            type: "mcq",
+            question: "CV is highest and lowest in:",
+            options: ["anthracite and lignite", "bituminous and pit", "anthracite and pit", "lignite and anthracite"],
+            answer: "c",
+            hint: "Consider coal types"
+        },
+        {
+            type: "mcq",
+            question: "In GCV formula correction, fuse wire correction and acid correction is:",
+            options: ["added and subtracted", "both subtracted", "both added", "subtracted and added"],
+            answer: "b",
+            hint: "Think about calorimeter corrections"
+        },
+        {
+            type: "mcq",
+            question: "Diesel oil fraction has boiling range:",
+            options: ["120-180°C", "180-250°C", "250-320°C", "320-400°C"],
+            answer: "c",
+            hint: "Consider fractional distillation"
+        }
+            ],
+            
+            
+            
+            
+            
+            5: [
+        {
+            type: "mcq",
+            question: "A fuel cell is used to convert chemical energy into:",
+            options: ["Mechanical energy", "Solar energy", "Electrical energy", "Potential energy"],
+            answer: "c",
+            hint: "Think about energy conversion in fuel cells"
+        },
+        {
+            type: "mcq",
+            question: "Select the incorrect statement about fuel cells:",
+            options: [
+                "Fuel cells have high efficiency",
+                "The emission levels of fuel cells are far below the permissible limits", 
+                "Fuel cells are modular",
+                "The noise levels of fuel cells are high"
+            ],
+            answer: "d",
+            hint: "Consider fuel cell characteristics"
+        },
+        {
+            type: "mcq",
+            question: "What is required to promote high rate of electrode processes?",
+            options: ["Lower temperature", "Higher temperature", "Moderate temperature", "Very low temperature"],
+            answer: "b",
+            hint: "Think about reaction conditions"
+        },
+        {
+            type: "mcq",
+            question: "Fuel cells are free from vibrations, heat transfer and thermal pollution:",
+            options: ["True", "False"],
+            answer: "a",
+            hint: "Consider environmental impact"
+        },
+        {
+            type: "mcq",
+            question: "Which is not an example of a fuel cell?",
+            options: ["Hydrogen-oxygen cell", "Methyl-oxygen-alcohol cell", "Propane-oxygen cell", "Hexanone-oxygen cell"],
+            answer: "d",
+            hint: "Think about common fuel cell types"
+        },
+        {
+            type: "mcq",
+            question: "The electrolytic solution used in a hydrogen-oxygen fuel cell is:",
+            options: ["75% KOH solution", "25% KOH solution", "75% NaOH solution", "25% NaOH solution"],
+            answer: "b",
+            hint: "Consider electrolyte composition"
+        },
+        {
+            type: "mcq",
+            question: "The standard emf of the Solid oxide fuel cell(SOFC) is:",
+            options: ["1.23 V", "2.54 V", "3.96 V", "0.58 V"],
+            answer: "a",
+            hint: "Think about standard potentials"
+        },
+        {
+            type: "mcq",
+            question: "The residual product discharged by the hydrogen-oxygen cell is:",
+            options: ["Hydrogen peroxide", "Alcohol", "Water", "Potassium permanganate"],
+            answer: "c",
+            hint: "Consider reaction products"
+        },
+        {
+            type: "mcq",
+            question: "Hydrogen-oxygen fuel cell can produce drinking water of potable quality:",
+            options: ["True", "False"],
+            answer: "a",
+            hint: "Think about product purity"
+        },
+        {
+            type: "mcq",
+            question: "A fuel cell is a type of electrochemical cell:",
+            options: ["True", "False"],
+            answer: "a",
+            hint: "Consider cell classification"
+        },
+                {
+            type: "mcq",
+            question: "Kerosene oil fraction has boiling range:",
+            options: ["120-180°C", "180-250°C", "250-320°C", "320-400°C"],
+            answer: "b",
+            hint: "Consider petroleum fractions"
+        },
+        {
+            type: "mcq",
+            question: "Petrol fraction has boiling range:",
+            options: ["40-180°C", "180-250°C", "250-320°C", "320-400°C"],
+            answer: "a",
+            hint: "Think about gasoline distillation"
+        },
+        {
+            type: "mcq",
+            question: "Lubricating oil fraction has boiling range:",
+            options: ["120-180°C", "180-250°C", "250-320°C", "Above 400°C"],
+            answer: "d",
+            hint: "Consider high boiling fractions"
+        },
+        {
+            type: "mcq",
+            question: "Knocking in petrol engine is due to:",
+            options: ["Gradual combustion", "Rapid combustion", "Slow combustion", "No combustion"],
+            answer: "b",
+            hint: "Think about engine combustion"
+        },
+        {
+            type: "mcq",
+            question: "Octane number of iso-octane is:",
+            options: ["0", "50", "100", "200"],
+            answer: "c",
+            hint: "Consider reference fuels"
+        },
+        {
+            type: "mcq",
+            question: "Cetane number of n-hexadecane is:",
+            options: ["0", "50", "100", "200"],
+            answer: "c",
+            hint: "Think about diesel reference"
+        },
+        {
+            type: "mcq",
+            question: "Flash point of kerosene is:",
+            options: ["Above 35°C", "Below 35°C", "At 35°C", "Cannot be determined"],
+            answer: "a",
+            hint: "Consider safety parameters"
+        },
+        {
+            type: "mcq",
+            question: "Fire point is always:",
+            options: ["Equal to flash point", "Less than flash point", "Greater than flash point", "Cannot be compared"],
+            answer: "c",
+            hint: "Think about ignition temperatures"
+        },
+        {
+            type: "mcq",
+            question: "Cloud point is temperature at which:",
+            options: ["Oil becomes cloudy", "Oil becomes clear", "Oil freezes", "Oil boils"],
+            answer: "a",
+            hint: "Consider low temperature behavior"
+        },
+        {
+            type: "mcq",
+            question: "Pour point is always:",
+            options: ["Equal to cloud point", "Less than cloud point", "Greater than cloud point", "Cannot be compared"],
+            answer: "b",
+            hint: "Think about flow properties"
+        },
+                {
+            type: "mcq",
+            question: "In standard hydrogen electrode, concentration of hydrogen is:",
+            options: ["0M", "0.5M", "1M", "1.5M"],
+            answer: "c",
+            hint: "Consider standard conditions"
+        },
+        {
+            type: "mcq",
+            question: "The temperature maintained in the standard hydrogen electrode is:",
+            options: ["22°C", "23°C", "24°C", "25°C"],
+            answer: "d",
+            hint: "Think about standard temperature"
+        },
+        {
+            type: "mcq",
+            question: "The emf of the standard hydrogen electrode is:",
+            options: ["0V", "1V", "2V", "3V"],
+            answer: "a",
+            hint: "Consider reference potential"
+        },
+        {
+            type: "mcq",
+            question: "In primary cells reaction is not reversible:",
+            options: ["True", "False"],
+            answer: "a",
+            hint: "Think about cell types"
+        },
+        {
+            type: "mcq",
+            question: "The energy of the fuel cells:",
+            options: ["Can be recharged", "Cannot be recharged", "Is stored", "Cannot be said"],
+            answer: "c",
+            hint: "Consider fuel cell operation"
+        },
+        {
+            type: "mcq",
+            question: "What is the function of a sensor?",
+            options: [
+                "To convert physical quantities into electrical signals",
+                "To convert electrical signals into physical quantities",
+                "To measure the speed of a moving object",
+                "To control the temperature of a system"
+            ],
+            answer: "a",
+            hint: "Think about sensor purpose"
+        },
+        {
+            type: "mcq",
+            question: "Which of the following is a type of temperature sensor?",
+            options: ["Thermocouple", "Accelerometer", "Pressure sensor", "Proximity sensor"],
+            answer: "a",
+            hint: "Consider temperature measurement"
+        },
+        {
+            type: "mcq",
+            question: "Which of the following is a type of pressure sensor?",
+            options: ["Strain gauge", "pH sensor", "Temperature sensor", "Flow sensor"],
+            answer: "a",
+            hint: "Think about pressure measurement"
+        },
+        {
+            type: "mcq",
+            question: "What is the function of a transducer?",
+            options: [
+                "To convert electrical signals into physical quantities",
+                "To measure the speed of a moving object",
+                "To control the temperature of a system",
+                "To convert physical quantities into electrical signals"
+            ],
+            answer: "a",
+            hint: "Consider signal conversion"
+        },
+        {
+            type: "mcq",
+            question: "Which of the following is a type of flow sensor?",
+            options: ["Thermocouple", "Strain gauge", "pH sensor", "Turbine flow meter"],
+            answer: "d",
+            hint: "Think about flow measurement"
+        },
+                {
+            type: "mcq",
+            question: "Which of the following is a type of level sensor?",
+            options: ["pH sensor", "Ultrasonic sensor", "RTD", "Accelerometer"],
+            answer: "b",
+            hint: "Consider distance measurement methods"
+        },
+        {
+            type: "mcq",
+            question: "What is the function of a pH sensor?",
+            options: [
+                "To measure the temperature of a system",
+                "To measure the flow rate of a fluid", 
+                "To measure the acidity or alkalinity of a solution",
+                "To measure the pressure of a system"
+            ],
+            answer: "c",
+            hint: "Think about pH measurement"
+        },
+        {
+            type: "mcq",
+            question: "A fuel cell is used to convert chemical energy into:",
+            options: ["Mechanical energy", "Solar energy", "Electrical energy", "Potential energy"],
+            answer: "c",
+            hint: "Consider energy conversion"
+        },
+        {
+            type: "mcq",
+            question: "Select the incorrect statement about fuel cells:",
+            options: [
+                "Fuel cells have high efficiency",
+                "The emission levels of fuel cells are far below the permissible limits",
+                "Fuel cells are modular",
+                "The noise levels of fuel cells are high"
+            ],
+            answer: "d",
+            hint: "Think about fuel cell characteristics"
+        },
+        {
+            type: "mcq",
+            question: "What temperature and suitable catalyst are required to promote high rate of electrode processes?",
+            options: ["Lower temperature", "Higher temperature", "Moderate temperature", "Very low temperature"],
+            answer: "b",
+            hint: "Consider reaction conditions"
+        },
+        {
+            type: "mcq",
+            question: "Which of the following is true for a secondary battery?",
+            options: [
+                "It can only be used once",
+                "It cannot be recharged",
+                "It can be recharged multiple times",
+                "It uses a single reaction for both discharge and recharge"
+            ],
+            answer: "c",
+            hint: "Think about battery types"
+        },
+        {
+            type: "mcq",
+            question: "What is the main function of a battery?",
+            options: [
+                "To store electrical energy",
+                "To generate heat energy",
+                "To store chemical energy and convert it to electrical energy",
+                "To produce light energy"
+            ],
+            answer: "c",
+            hint: "Consider energy storage and conversion"
+        },
+        {
+            type: "mcq",
+            question: "In a lithium-ion battery, the cathode is made of:",
+            options: ["Lead oxide", "Graphite", "Lithium cobalt oxide", "Zinc"],
+            answer: "c",
+            hint: "Think about battery components"
+        },
+        {
+            type: "mcq",
+            question: "Which of the following batteries is commonly used in electric vehicles (EVs)?",
+            options: ["Nickel-cadmium battery", "Zinc-carbon battery", "Lead-acid battery", "Lithium-ion battery"],
+            answer: "d",
+            hint: "Consider EV requirements"
+        },
+        {
+            type: "mcq",
+            question: "Which of the following statements is true about fuel cells?",
+            options: [
+                "They only work with hydrogen as the fuel",
+                "They produce electricity and water as byproducts",
+                "They generate power through combustion",
+                "They require periodic recharging like batteries"
+            ],
+            answer: "b",
+            hint: "Think about fuel cell operation"
+        },
+                {
+            type: "mcq",
+            question: "What is the main byproduct of a Methanol-Oxygen Fuel Cell?",
+            options: ["Carbon dioxide and water", "Nitrogen and carbon monoxide", "Oxygen and hydrogen", "Methane and water"],
+            answer: "a", 
+            hint: "Consider methanol oxidation products"
+        },
+        {
+            type: "mcq",
+            question: "How does the Internet of Batteries (IoB) help in the management of electric vehicle (EV) batteries?",
+            options: [
+                "By directly controlling the vehicle's speed",
+                "By predicting battery failure and optimizing charging cycles",
+                "By increasing the battery's weight",
+                "By automatically replacing old batteries"
+            ],
+            answer: "b",
+            hint: "Think about smart battery management"
+        },
+        {
+            type: "mcq", 
+            question: "In a photovoltaic solar cell, what happens when sunlight strikes the surface?",
+            options: [
+                "It generates heat only",
+                "It excites electrons, creating an electric current",
+                "It causes the semiconductor to melt",
+                "It reflects the light away"
+            ],
+            answer: "b",
+            hint: "Consider photovoltaic effect"
+        },
+        {
+            type: "mcq",
+            question: "Which of the following is NOT a type of electrochemical sensor?",
+            options: ["Potentiometric sensor", "Amperometric sensor", "Thermocouple sensor", "Conductometric sensor"],
+            answer: "c",
+            hint: "Think about sensor classifications"
+        },
+        {
+            type: "mcq",
+            question: "What is the basic working principle of an electrochemical sensor?",
+            options: [
+                "Conversion of chemical energy into light",
+                "Measurement of physical properties like temperature and pressure",
+                "Conversion of a chemical signal into an electrical signal",
+                "Conversion of mechanical energy into electrical energy"
+            ],
+            answer: "c",
+            hint: "Consider sensor fundamentals"
+        },
+        {
+            type: "mcq",
+            question: "In a conductometric electrochemical sensor, what is measured?",
+            options: [
+                "Electrical potential",
+                "Concentration of specific ions",
+                "Change in electrical resistance or conductivity",
+                "Current generated by a reaction"
+            ],
+            answer: "c",
+            hint: "Think about conductivity measurement"
+        },
+        {
+            type: "mcq",
+            question: "Which factors can affect the conductivity of a Diclofenac solution when using a conductivity sensor?",
+            options: [
+                "Temperature of the solution",
+                "pH of the solution",
+                "Concentration of Diclofenac ions in the solution",
+                "All of the above"
+            ],
+            answer: "d",
+            hint: "Consider solution properties"
+        },
+        {
+            type: "mcq",
+            question: "Which best describes the use of conductivity sensors in environmental monitoring of Diclofenac?",
+            options: [
+                "To measure the chemical composition of Diclofenac in water bodies",
+                "To detect the specific molecular weight of Diclofenac",
+                "To determine the viscosity of Diclofenac solutions",
+                "To monitor the temperature fluctuations in water"
+            ],
+            answer: "a",
+            hint: "Think about environmental applications"
+        },
+                {
+            type: "mcq",
+            question: "Which type of conductivity measurement method would be most suitable for measuring Diclofenac in a high-concentration aqueous solution?",
+            options: [
+                "Contacting conductivity sensor",
+                "Non-contacting conductivity sensor", 
+                "Optical conductivity sensor",
+                "Inductive conductivity sensor"
+            ],
+            answer: "a",
+            hint: "Consider concentration measurement methods"
+        },
+        {
+            type: "mcq",
+            question: "What is the role of a conductivity sensor in the preparation of Diclofenac formulations?",
+            options: [
+                "To ensure the correct pH of the formulation",
+                "To monitor the ionic content during the mixing process",
+                "To determine the solubility of Diclofenac in solvents",
+                "To measure the particle size distribution of Diclofenac"
+            ],
+            answer: "b",
+            hint: "Think about formulation monitoring"
+        },
+        {
+            type: "mcq",
+            question: "How does a conductivity sensor differentiate between Diclofenac and other compounds in a mixture?",
+            options: [
+                "By measuring the color of the solution",
+                "By detecting the specific conductivity changes associated with Diclofenac ions",
+                "By measuring the molecular mass of Diclofenac",
+                "By using a pH-specific sensor"
+            ],
+            answer: "b",
+            hint: "Consider ionic detection methods"
+        },
+        {
+            type: "mcq",
+            question: "What is a major advantage of using a conductivity sensor to monitor Diclofenac concentration in wastewater treatment?",
+            options: [
+                "The sensor can detect the presence of Diclofenac without chemical reagents",
+                "The sensor can identify the exact chemical structure of Diclofenac",
+                "The sensor is more accurate than other analytical techniques",
+                "The sensor can be used in any temperature range without calibration"
+            ],
+            answer: "a",
+            hint: "Think about sensor benefits"
+        },
+        {
+            type: "mcq",
+            question: "Which of the following would cause a decrease in the conductivity of a Diclofenac solution during measurement?",
+            options: [
+                "Increasing the ionic strength of the solution",
+                "Diluting the solution with a non-ionic solvent",
+                "Decreasing the temperature of the solution",
+                "Increasing the concentration of Diclofenac"
+            ],
+            answer: "b",
+            hint: "Consider solution properties"
+        },
+        {
+            type: "mcq",
+            question: "Which of the following is an advantage of electrochemical sensors over other types of sensors?",
+            options: [
+                "They are typically expensive",
+                "They require large sample volumes",
+                "They offer high sensitivity and can be miniaturized",
+                "They cannot be used for real-time monitoring"
+            ],
+            answer: "c",
+            hint: "Think about sensor characteristics"
+        },
+        {
+            type: "mcq",
+            question: "In a conductometric electrochemical sensor, what is measured?",
+            options: [
+                "Electrical potential",
+                "Concentration of specific ions",
+                "Change in electrical resistance or conductivity",
+                "Current generated by a reaction"
+            ],
+            answer: "c",
+            hint: "Consider measurement principles"
+        },
+        {
+            type: "mcq",
+            question: "Which of the following is a common application of electrochemical sensors?",
+            options: [
+                "Detecting radiation",
+                "Monitoring gas emissions",
+                "Monitoring temperature in industrial processes",
+                "Detecting magnetic fields"
+            ],
+            answer: "b",
+            hint: "Think about sensor applications"
+        },
+        {
+            type: "mcq",
+            question: "Which of the following materials is commonly used as the working electrode in electrochemical sensors?",
+            options: ["Gold", "Silver", "Platinum", "All of the above"],
+            answer: "d",
+            hint: "Consider electrode materials"
+        },
+                {
+            type: "mcq",
+            question: "What is the key characteristic of an amperometric sensor?",
+            options: [
+                "It measures the potential difference between electrodes",
+                "It detects the current produced by a redox reaction",
+                "It monitors changes in voltage over time", 
+                "It measures the resistance of the material"
+            ],
+            answer: "b",
+            hint: "Consider current measurement principles"
+        },
+        {
+            type: "mcq",
+            question: "Which of the following analytes can be detected using an electrochemical sensor?",
+            options: [
+                "Gases like CO₂ and O₂",
+                "Heavy metals like lead and mercury",
+                "Biological markers like glucose and lactate",
+                "All of the above"
+            ],
+            answer: "d",
+            hint: "Think about sensor applications"
+        },
+        {
+            type: "mcq",
+            question: "Which of the following factors can affect the performance of an electrochemical sensor?",
+            options: [
+                "Temperature",
+                "pH of the solution",
+                "Concentration of the analyte",
+                "All of the above"
+            ],
+            answer: "d",
+            hint: "Consider environmental factors"
+        },
+        {
+            type: "mcq",
+            question: "What is one of the challenges associated with the use of electrochemical sensors in the field?",
+            options: [
+                "They require constant calibration",
+                "They are too large to be used in portable devices",
+                "They are unable to detect certain gases",
+                "They are highly resistant to chemical interference"
+            ],
+            answer: "a",
+            hint: "Think about practical limitations"
+        },
+        {
+            type: "mcq",
+            question: "What is the primary function of a potentiometric electrochemical sensor?",
+            options: [
+                "To measure the concentration of an analyte by detecting current",
+                "To measure the concentration of an analyte by detecting voltage",
+                "To detect the physical temperature of a sample",
+                "To measure the resistance of a sample"
+            ],
+            answer: "b",
+            hint: "Consider voltage measurement principles"
+        }
+            ]
+        };
+
+        let userStarted = false;
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let hintsUsed = 0;
+        let isQuizActive = true;
+        let quizQuestions = [];
+        let selectedUnit = null;
+        let waitingForRetry = false;
+
+        const chatMessages = document.getElementById('chat-messages');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        const hintButton = document.getElementById('hint-button');
+        const exitButton = document.getElementById('exit-button');
+        const restartButton = document.getElementById('restart-button');
+        const scoreElement = document.getElementById('score');
+
+        function addMessage(message, isUser) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+            
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+            messageContent.textContent = message;
+            
+            messageDiv.appendChild(messageContent);
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function resetQuiz() {
+            userStarted = false;
+            currentQuestionIndex = 0;
+            score = 0;
+            hintsUsed = 0;
+            isQuizActive = true;
+            waitingForRetry = false;
+            selectedUnit = null;
+            quizQuestions = [];
+            scoreElement.textContent = '0';
+            
+            userInput.disabled = false;
+            sendButton.disabled = false;
+            hintButton.disabled = false;
+            exitButton.disabled = false;
+            restartButton.disabled = false;
+            
+            userInput.classList.remove('disabled');
+            sendButton.classList.remove('disabled');
+            hintButton.classList.remove('disabled');
+            exitButton.classList.remove('disabled');
+            restartButton.classList.remove('disabled');
+
+            chatMessages.innerHTML = '';
+            greetUser();
+        }
+
+        function startQuiz() {
+            if (!quizQuestions || quizQuestions.length === 0) {
+                addMessage("Error: No questions available for this unit.", false);
+                return;
+            }
+            
+            userStarted = true;
+            isQuizActive = true;
+            waitingForRetry = false;
+            currentQuestionIndex = 0;
+            score = 0;
+            hintsUsed = 0;
+            scoreElement.textContent = '0';
+            
+            addMessage(`Starting Unit ${selectedUnit} quiz!`, false);
+            addMessage("For MCQs, just type the letter of your answer (a, b, c, or d).", false);
+            addMessage("You can ask for hints, but each hint will reduce your score by 0.5 points.", false);
+            setTimeout(askQuestion, 2000);
+        }
+
+        function greetUser() {
+            addMessage("👋 Hello! Welcome to the Chemistry Quiz Bot!", false);
+            setTimeout(() => {
+                addMessage("Please select a unit to begin (1-5):", false);
+                addMessage("1: Unit 1\n2: Unit 2\n3: Unit 3\n4: Unit 4\n5: Unit 5", false);
+            }, 1000);
+        }
+
+        function handleInitialResponse(response) {
+            const unit = parseInt(response);
+            if (unit >= 1 && unit <= 5) {
+                selectedUnit = unit;
+                quizQuestions = quizQuestionsByUnit[unit];
+                startQuiz();
+            } else {
+                addMessage("Please enter a valid unit number (1-5).", false);
+            }
+        }
+
+        function askQuestion() {
+            if (!isQuizActive || !userStarted) return;
+
+            if (currentQuestionIndex < quizQuestions.length) {
+                const question = quizQuestions[currentQuestionIndex];
+                addMessage(question.question, false);
+            } else if (quizQuestions.length > 0) {
+                const finalScore = score - (hintsUsed * 0.5);
+                addMessage(`Unit ${selectedUnit} Quiz completed! Final score: ${finalScore}/${quizQuestions.length} (Hints used: ${hintsUsed})`, false);
+                addMessage("Would you like to take another quiz? (yes/no)", false);
+                waitingForRetry = true;
+            }
+        }
+
+        function checkAnswer(userAnswer) {
+            if (!isQuizActive || !userStarted) return;
+
+            const currentQuestion = quizQuestions[currentQuestionIndex];
+            const isCorrect = userAnswer.toLowerCase() === currentQuestion.answer.toLowerCase();
+            
+            if (isCorrect) {
+                score++;
+                scoreElement.textContent = score;
+                addMessage("Correct! 🎉", false);
+            } else {
+                addMessage(`Incorrect. The correct answer was: ${currentQuestion.answer}`, false);
+            }
+
+            currentQuestionIndex++;
+            setTimeout(askQuestion, 1500);
+        }
+
+        function handleUserInput() {
+            const input = userInput.value.trim();
+            if (!input) return;
+
+            addMessage(input, true);
+            userInput.value = '';
+
+            if (!userStarted) {
+                handleInitialResponse(input);
+            } else if (waitingForRetry) {
+                if (input.toLowerCase() === 'yes') {
+                    userStarted = false;
+                    waitingForRetry = false;
+                    addMessage("Please select a unit to begin (1-5):", false);
+                    addMessage("1: Unit 1\n2: Unit 2\n3: Unit 3\n4: Unit 4\n5: Unit 5", false);
+                } else if (input.toLowerCase() === 'no') {
+                    const finalScore = score - (hintsUsed * 0.5);
+                    addMessage(`Thanks for taking the quiz! Final score: ${finalScore}/${quizQuestions.length}`, false);
+                    disableQuiz();
+                } else {
+                    addMessage("Please type 'yes' to continue or 'no' to exit.", false);
+                }
+            } else if (currentQuestionIndex < quizQuestions.length && isQuizActive) {
+                checkAnswer(input);
+            }
+        }
+
+        function disableQuiz() {
+            isQuizActive = false;
+            userInput.disabled = true;
+            sendButton.disabled = true;
+            hintButton.disabled = true;
+            exitButton.disabled = true;
+            restartButton.disabled = true;
+            
+            userInput.classList.add('disabled');
+            sendButton.classList.add('disabled');
+            hintButton.classList.add('disabled');
+            exitButton.classList.add('disabled');
+            restartButton.classList.add('disabled');
+        }
+
+        hintButton.addEventListener('click', () => {
+            if (currentQuestionIndex < quizQuestions.length && userStarted && isQuizActive) {
+                const hint = quizQuestions[currentQuestionIndex].hint;
+                addMessage(`Hint: ${hint}`, false);
+                hintsUsed++;
+            }
+        });
+
+        exitButton.addEventListener('click', () => {
+            if (!isQuizActive) return;
+            
+            const confirmExit = confirm("Are you sure you want to exit the quiz? Your progress will be lost.");
+            if (confirmExit) {
+                const finalScore = score - (hintsUsed * 0.5);
+                addMessage(`Thanks for taking the quiz! Final score: ${finalScore}/${quizQuestions.length} (Hints used: ${hintsUsed})`, false);
+                
+                setTimeout(() => {
+                    const wantToRestart = confirm("Would you like to start a new quiz?");
+                    if (wantToRestart) {
+                        resetQuiz();
+                    } else {
+                        disableQuiz();
+                    }
+                }, 1000);
+            }
+        });
+
+        restartButton.addEventListener('click', () => {
+            const confirmRestart = confirm("Are you sure you want to restart? Your progress will be lost.");
+            if (confirmRestart) {
+                resetQuiz();
+            }
+        });
+
+        sendButton.addEventListener('click', handleUserInput);
+        
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                handleUserInput();
+            }
+        });
+
+
+        greetUser();
+    </script>
+</body>
+</html>
