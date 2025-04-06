@@ -2408,18 +2408,26 @@
         }
 
         function askQuestion() {
-            if (!isQuizActive || !userStarted) return;
+    if (!isQuizActive || !userStarted) return;
 
-            if (currentQuestionIndex < quizQuestions.length) {
-                const question = quizQuestions[currentQuestionIndex];
-                addMessage(question.question, false);
-            } else if (quizQuestions.length > 0) {
-                const finalScore = score - (hintsUsed * 0.5);
-                addMessage(`Unit ${selectedUnit} Quiz completed! Final score: ${finalScore}/${quizQuestions.length} (Hints used: ${hintsUsed})`, false);
-                addMessage("Would you like to take another quiz? (yes/no)", false);
-                waitingForRetry = true;
-            }
-        }
+    if (currentQuestionIndex < quizQuestions.length) {
+        const question = quizQuestions[currentQuestionIndex];
+        addMessage(question.question, false); // Display the question
+
+        // Display options
+        question.options.forEach((option, index) => {
+            addMessage(`${String.fromCharCode(97 + index)}: ${option}`, false); // Display options a, b, c, d
+        });
+
+        // Optional: Display hint
+        addMessage("Type 'hint' for a hint if needed.", false);
+    } else {
+        const finalScore = score - (hintsUsed * 0.5);
+        addMessage(`Quiz completed! Final score: ${finalScore}/${quizQuestions.length} (Hints used: ${hintsUsed})`, false);
+        addMessage("Would you like to take another quiz? (yes/no)", false);
+        waitingForRetry = true;
+    }
+}
 
         function checkAnswer(userAnswer) {
             if (!isQuizActive || !userStarted) return;
@@ -2528,3 +2536,5 @@
     </script>
 </body>
 </html>
+
+
